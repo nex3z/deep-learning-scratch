@@ -6,7 +6,7 @@ def numerical_diff(f, x):
     return (f(x + delta) - f(x - delta)) / (2 * delta)
 
 
-def numerical_gradient(f, x):
+def numerical_gradient_1d(f, x):
     delta = 1e-4
     grad = np.zeros_like(x)
 
@@ -23,3 +23,10 @@ def numerical_gradient(f, x):
         x[idx] = tmp
 
     return grad
+
+
+def numerical_gradient(f, x):
+    if x.ndim == 1:
+        return numerical_gradient_1d(f, x)
+    else:
+        return np.apply_along_axis(lambda row: numerical_gradient_1d(f, row), 1, x)
