@@ -1,5 +1,5 @@
 import numpy as np
-from learn.functions import sigmoid, softmax, cross_entropy_error
+from basic.function import sigmoid, softmax, cross_entropy_error
 
 
 class Add(object):
