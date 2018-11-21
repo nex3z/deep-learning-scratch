@@ -1,6 +1,10 @@
 import numpy as np
 
 
+def zeros(*shape):
+    return np.zeros(shape)
+
+
 def normal(*shape, std=0.01):
     return np.random.randn(*shape) * std
 
