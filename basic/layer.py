@@ -83,7 +83,7 @@ class Sigmoid(object):
         return dx
 
 
-class SoftmaxWithLoss:
+class SoftmaxWithLoss(object):
     def __init__(self):
         self.loss = None
         self.y = None
@@ -99,3 +99,19 @@ class SoftmaxWithLoss:
         batch_size = self.t.shape[0]
         dx = (self.y - self.t) / batch_size
         return dx
+
+
+class Dropout(object):
+    def __init__(self, dropout_rate=0.5):
+        self.dropout_rate = dropout_rate
+        self.mask = None
+
+    def forward(self, x, training):
+        if training:
+            self.mask = np.random.rand(*x.shape) > self.dropout_rate
+            return x * self.mask
+        else:
+            return x * (1.0 - self.dropout_rate)
+
+    def backward(self, dout):
+        return dout * self.mask
