@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from learn.opt import numerical_gradient
-from learn.layers import Dense, Relu, SoftmaxWithLoss
+from basic.opt import numerical_gradient
+from basic.layer import Dense, Relu, SoftmaxWithLoss
 
 
 class TwoLayerNet(object):
