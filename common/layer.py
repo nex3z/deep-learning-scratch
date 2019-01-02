@@ -1,5 +1,20 @@
 import numpy as np
-from basic.function import sigmoid, softmax, cross_entropy_error
+from common.function import sigmoid, softmax, cross_entropy_error
+from common.initializer import normal, zeros
+from common.exception import UnimplementedMethodException
+
+
+class BaseLayer(object):
+    def backward(self, dout):
+        raise UnimplementedMethodException()
+
+    @property
+    def params(self):
+        return None
+
+    @property
+    def dparams(self):
+        return None
 
 
 class Add(object):
@@ -30,10 +45,10 @@ class Multiply(object):
         return dx, dy
 
 
-class Dense(object):
-    def __init__(self, W, b):
-        self.W = W
-        self.b = b
+class Dense(BaseLayer):
+    def __init__(self, input_size, output_size, kernel_initializer=normal, bias_initializer=zeros):
+        self.W = kernel_initializer(input_size, output_size)
+        self.b = bias_initializer(output_size)
         self.x = None
         self.original_x_shape = None
         self.dW = None
@@ -53,8 +68,22 @@ class Dense(object):
         dx = dx.reshape(*self.original_x_shape)
         return dx
 
+    @property
+    def params(self):
+        return {
+            'W': self.W,
+            'b': self.b,
+        }
 
-class Relu(object):
+    @property
+    def dparams(self):
+        return {
+            'W': self.dW,
+            'b': self.db,
+        }
+
+
+class Relu(BaseLayer):
     def __init__(self):
         self.mask = None
 
@@ -70,7 +99,7 @@ class Relu(object):
         return dx
 
 
-class Sigmoid(object):
+class Sigmoid(BaseLayer):
     def __init__(self):
         self.out = None
 
@@ -83,25 +112,25 @@ class Sigmoid(object):
         return dx
 
 
-class SoftmaxWithLoss(object):
+class SoftmaxWithLoss(BaseLayer):
     def __init__(self):
         self.loss = None
+        self.y_hat = None
         self.y = None
-        self.t = None
 
-    def forward(self, x, t):
-        self.t = t
-        self.y = softmax(x)
-        self.loss = cross_entropy_error(self.y, self.t)
+    def forward(self, x, y):
+        self.y = y
+        self.y_hat = softmax(x)
+        self.loss = cross_entropy_error(self.y_hat, self.y)
         return self.loss
 
     def backward(self, dout=1):
-        batch_size = self.t.shape[0]
-        dx = (self.y - self.t) / batch_size
+        batch_size = self.y.shape[0]
+        dx = (self.y_hat - self.y) / batch_size
         return dx
 
 
-class Dropout(object):
+class Dropout(BaseLayer):
     def __init__(self, dropout_rate=0.5):
         self.dropout_rate = dropout_rate
         self.mask = None
