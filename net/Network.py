@@ -3,7 +3,6 @@ from collections import OrderedDict
 import numpy as np
 
 from common.opt import numerical_gradient
-from optimizer.GradientDescent import GradientDescent
 
 
 class Network(object):
@@ -11,10 +10,10 @@ class Network(object):
         self.layers = OrderedDict()
         self.layers_cnt = {}
         self.last_layer = None
-        self.optimizer = None
+        self.weight_decay_lambda = 0
 
     def add(self, layer, name=None):
-        if not name:
+        if name is None:
             name = self.__get_name_for_layer(layer)
         self.layers[name] = layer
 
@@ -29,44 +28,76 @@ class Network(object):
     def params(self):
         params = {}
         for layer_name, layer in self.layers.items():
-            if not layer.params:
+            if layer.params is None:
                 continue
             for param_name, param in layer.params.items():
                 params['{}_{}'.format(layer_name, param_name)] = param
         return params
 
-    def build(self, last_layer, optimizer=GradientDescent):
+    @property
+    def weights(self):
+        params = {}
+        for layer_name, layer in self.layers.items():
+            if layer.params is None:
+                continue
+            for param_name, param in layer.params.items():
+                if param_name == 'W':
+                    params['{}_{}'.format(layer_name, param_name)] = param
+        return params
+
+    @property
+    def dparams(self):
+        dparams = {}
+        for layer_name, layer in self.layers.items():
+            if layer.dparams is None:
+                continue
+            for dparam_name, dparam in layer.dparams.items():
+                dparams['{}_{}'.format(layer_name, dparam_name)] = dparam
+        return dparams
+
+    def build(self, last_layer, weight_decay_lambda=0):
         self.last_layer = last_layer
-        self.optimizer = optimizer
+        self.weight_decay_lambda = weight_decay_lambda
 
     def predict(self, x):
         for layer in self.layers.values():
             x = layer.forward(x)
         return x
 
-    def loss(self, x, y):
-        y_hat = self.predict(x)
-        return self.last_layer.forward(y_hat, y)
+    def loss(self, x, y, y_hat=None):
+        if y_hat is None:
+            y_hat = self.predict(x)
 
-    def accuracy(self, x, y):
-        y_hat = self.predict(x)
+        weight_decay = 0
+        for weight_name, weight in self.weights.items():
+            weight_decay += 0.5 * self.weight_decay_lambda * np.sum(weight ** 2)
+
+        return self.last_layer.forward(y_hat, y) + weight_decay
+
+    def accuracy(self, x, y, y_hat=None):
+        if y_hat is None:
+            y_hat = self.predict(x)
         y_hat = np.argmax(y_hat, axis=1)
+
         if y.ndim != 1:
             y = np.argmax(y, axis=1)
 
         accuracy = np.sum(y_hat == y) / float(x.shape[0])
         return accuracy
 
+    def evaluate(self, x, y):
+        y_hat = self.predict(x)
+        loss = self.loss(x, y, y_hat)
+        accuracy = self.accuracy(x, y, y_hat)
+        return loss, accuracy
+
     def numerical_gradient(self, x, y):
         def loss(w):
             return self.loss(x, y)
 
         grads = {}
-        for layer_name, layer in self.layers.items():
-            if not layer.params:
-                continue
-            for param_name, param in layer.params.items():
-                grads['{}_{}'.format(layer_name, param_name)] = numerical_gradient(loss, param)
+        for param_name, param in self.params.items():
+            grads[param_name] = numerical_gradient(loss, param)
 
         return grads
 
@@ -81,11 +112,8 @@ class Network(object):
         for layer in layers:
             dout = layer.backward(dout)
 
-        grads = {}
-        for layer_name, layer in self.layers.items():
-            if not layer.dparams:
-                continue
-            for param_name, param in layer.dparams.items():
-                grads['{}_{}'.format(layer_name, param_name)] = param
+        dparams = self.dparams
+        for weight_name, weight in self.weights.items():
+            dparams[weight_name] += self.weight_decay_lambda * weight
 
-        return grads
+        return dparams
