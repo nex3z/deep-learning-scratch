@@ -1,8 +1,6 @@
-import math
-
 import matplotlib.pyplot as plt
-import numpy as np
 
+from data.BatchGenerator import BatchGenerator
 from net.Network import Network
 from optimizer.GradientDescent import GradientDescent
 
@@ -26,17 +24,13 @@ class Model(object):
         self.optimizer = optimizer
 
     def fit(self, x, y, batch_size, epochs, validation_data=None):
-        train_size = y.shape[0]
-        batch_per_epoch = math.ceil(train_size / batch_size)
+        batch_generator = BatchGenerator(x, y, batch_size)
 
         for epoch in range(1, epochs + 1):
             print("Epoch {}/{}".format(epoch, epochs + 1))
-            for batch in range(batch_per_epoch):
+            for batch in range(batch_generator.batch_per_epoch):
                 self.iter_cnt += 1
-                batch_mask = np.random.choice(train_size, batch_size)
-                x_batch = x[batch_mask]
-                y_batch = y[batch_mask]
-
+                x_batch, y_batch = batch_generator.next_batch()
                 grads = self.network.gradient(x_batch, y_batch)
                 self.optimizer.update(self.network.params, grads)
 
