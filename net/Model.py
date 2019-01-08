@@ -19,8 +19,8 @@ class Model(object):
     def add(self, layer, name=None):
         self.network.add(layer, name)
 
-    def build(self, last_layer, optimizer=GradientDescent(), weight_decay_lambda=0):
-        self.network.build(last_layer, weight_decay_lambda)
+    def build(self, last_layer, optimizer=GradientDescent(), kernel_regularizer=None):
+        self.network.build(last_layer, kernel_regularizer)
         self.optimizer = optimizer
 
     def fit(self, x, y, batch_size, epochs, validation_data=None):

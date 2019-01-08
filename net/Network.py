@@ -10,7 +10,7 @@ class Network(object):
         self.layers = OrderedDict()
         self.layers_cnt = {}
         self.last_layer = None
-        self.weight_decay_lambda = 0
+        self.kernel_regularizer = None
 
     def add(self, layer, name=None):
         if name is None:
@@ -55,28 +55,29 @@ class Network(object):
                 dparams['{}_{}'.format(layer_name, dparam_name)] = dparam
         return dparams
 
-    def build(self, last_layer, weight_decay_lambda=0):
+    def build(self, last_layer, kernel_regularizer=None):
         self.last_layer = last_layer
-        self.weight_decay_lambda = weight_decay_lambda
+        self.kernel_regularizer = kernel_regularizer
 
-    def predict(self, x):
+    def predict(self, x, training=False):
         for layer in self.layers.values():
-            x = layer.forward(x)
+            x = layer.forward(x, training=training)
         return x
 
-    def loss(self, x, y, y_hat=None):
+    def loss(self, x, y, y_hat=None, training=False):
         if y_hat is None:
-            y_hat = self.predict(x)
+            y_hat = self.predict(x, training=training)
 
         weight_decay = 0
-        for weight_name, weight in self.weights.items():
-            weight_decay += 0.5 * self.weight_decay_lambda * np.sum(weight ** 2)
+        if self.kernel_regularizer is not None:
+            for weight_name, weight in self.weights.items():
+                weight_decay += self.kernel_regularizer.loss(weight)
 
-        return self.last_layer.forward(y_hat, y) + weight_decay
+        return self.last_layer.forward(y_hat, y=y) + weight_decay
 
     def accuracy(self, x, y, y_hat=None):
         if y_hat is None:
-            y_hat = self.predict(x)
+            y_hat = self.predict(x, training=False)
         y_hat = np.argmax(y_hat, axis=1)
 
         if y.ndim != 1:
@@ -93,7 +94,7 @@ class Network(object):
 
     def numerical_gradient(self, x, y):
         def loss(w):
-            return self.loss(x, y)
+            return self.loss(x, y, training=True)
 
         grads = {}
         for param_name, param in self.params.items():
@@ -102,7 +103,7 @@ class Network(object):
         return grads
 
     def gradient(self, x, y):
-        self.loss(x, y)
+        self.loss(x, y, training=True)
 
         dout = 1
         dout = self.last_layer.backward(dout)
@@ -113,7 +114,8 @@ class Network(object):
             dout = layer.backward(dout)
 
         dparams = self.dparams
-        for weight_name, weight in self.weights.items():
-            dparams[weight_name] += self.weight_decay_lambda * weight
+        if self.kernel_regularizer is not None:
+            for weight_name, weight in self.weights.items():
+                dparams[weight_name] += self.kernel_regularizer.dloss(weight)
 
         return dparams
