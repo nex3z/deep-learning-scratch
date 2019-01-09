@@ -6,7 +6,9 @@ import numpy as np
 
 from data.DataSet import DataSet, Datasets
 
-IMAGE_SIZE = 784
+IMAGE_WIDTH = 28
+IMAGE_HEIGHT = 28
+IMAGE_SIZE = IMAGE_WIDTH * IMAGE_HEIGHT
 TRAIN_IMAGES = 'train-images-idx3-ubyte.gz'
 TRAIN_LABELS = 'train-labels-idx1-ubyte.gz'
 TEST_IMAGES = 't10k-images-idx3-ubyte.gz'
@@ -14,11 +16,11 @@ TEST_LABELS = 't10k-labels-idx1-ubyte.gz'
 BASE_URL = 'http://yann.lecun.com/exdb/mnist/'
 
 
-def read_data(base_dir, normalize=True, validation_size=5000, one_hot=False):
+def read_data(base_dir, normalize=True, validation_size=5000, one_hot=False, flatten=True):
     check_data(base_dir)
 
-    train_images = read_image(path.join(base_dir, TRAIN_IMAGES))
-    test_images = read_image(path.join(base_dir, TEST_IMAGES))
+    train_images = read_image(path.join(base_dir, TRAIN_IMAGES), flatten)
+    test_images = read_image(path.join(base_dir, TEST_IMAGES), flatten)
 
     if normalize:
         train_images = train_images / 255.0
@@ -65,9 +67,12 @@ def convert_to_one_hot(labels, num_classes=10):
     return one_hot
 
 
-def read_image(file_path):
+def read_image(file_path, flatten):
     print("reading {}".format(file_path))
     with gzip.open(file_path, 'rb') as f:
         data = np.frombuffer(f.read(), np.uint8, offset=16)
-    data = data.reshape(-1, IMAGE_SIZE)
+    if flatten:
+        data = data.reshape(-1, IMAGE_SIZE)
+    else:
+        data = data.reshape(-1, 1, IMAGE_HEIGHT, IMAGE_WIDTH)
     return data
