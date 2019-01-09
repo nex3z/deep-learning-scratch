@@ -25,8 +25,14 @@ def mean_square_error(y, y_hat):
 
 
 def cross_entropy_error(y, y_hat):
-    if y.ndim == 1:
+    if y_hat.ndim == 1:
         y = y.reshape(1, len(y))
         y_hat = y_hat.reshape(1, len(y_hat))
-    batch_size = y.shape[0]
-    return -np.sum(y_hat * np.log(y + 1e-7)) / batch_size
+
+    batch_size = y_hat.shape[0]
+    is_one_hot = y.size == y_hat.size
+    if is_one_hot:
+        return -np.sum(y * np.log(y_hat + 1e-7)) / batch_size
+    else:
+        y_hat = y_hat[np.arange(batch_size), y]
+        return -np.sum(np.log(y_hat + 1e-7)) / batch_size
