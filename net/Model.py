@@ -1,9 +1,11 @@
+import pickle
+
 import matplotlib.pyplot as plt
 
+from common.ProgressBar import ProgressBar
 from data.BatchGenerator import BatchGenerator
 from net.Network import Network
 from optimizer.GradientDescent import GradientDescent
-from common.ProgressBar import ProgressBar
 
 
 class Model(object):
@@ -66,3 +68,18 @@ class Model(object):
         plt.plot(epochs, val_history, marker='o', label='validation')
         plt.legend()
         plt.show()
+
+    def save(self, file_name='params.pkl'):
+        params = {}
+        for key, val in self.network.params.items():
+            params[key] = val
+        with open(file_name, 'wb') as f:
+            pickle.dump(params, f)
+
+    def load(self, file_name='params.pkl'):
+        with open(file_name, 'rb') as f:
+            params = pickle.load(f)
+
+        for name, param in params.items():
+            layer_name, param_name = name.rsplit('_', 1)
+            setattr(self.network.layers[layer_name], param_name, param)
